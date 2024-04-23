@@ -1,0 +1,19 @@
+upload python project in github
+
+GITHUB
+- create a new repository with .gitignore (python template). And also NO LICENSE needed for now
+
+WINDOWS
+- download git (no need to change anything, path and everything is given as default)
+- configure git user name and id (to show when committing)
+    - `git config --global user.name "your_username"`
+    - `git config --global user.email "your_email@example.com"`
+
+PYCHARM
+- configure pycharm with git (file --> setting --> version control --> git -->  "Path to git executable")
+    - provide destination of git.exe (**Ex:** D:\Program Files\Git\cmd\git.exe)
+- initialize git in project to connect with github
+    - pycharm project terminal --> type below code
+        - git init
+        - git remote add origin https://github.com/shovon123/dynamicAutomation.git
+
