@@ -1,3 +1,11 @@
+"""
+Advantage
+- user has control over automations
+Disadvantage
+- the smoothing factor, Initial confidence is being adjusted by hand
+- user intervention was not fully solved
+"""
+
 import os
 import pandas as pd
 
@@ -211,7 +219,6 @@ def append_in_repetitive_csv(behavior_description):
 - keep track of every dumped behavior in garbage
 """
 def decrease_confidence(dict_for_behavior_confidences, behavior, repetitive_pattern, daily_behaviors):
-    print(f"SHOVON HERE FOR: {behavior} with: {dict_for_behavior_confidences[behavior]}")
     specific_behavior_confidence_list = dict_for_behavior_confidences[behavior]
     last_confidence = specific_behavior_confidence_list[-1]
 

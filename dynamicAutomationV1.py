@@ -1,3 +1,11 @@
+"""
+Advantage
+- user intervention is reduced
+Disadvantage
+- the smoothing factor, Initial confidence is being adjusted by hand
+- it takes more time to create and same amount of time to remove an automation
+"""
+
 import os
 import pandas as pd
 
@@ -78,9 +86,6 @@ def clean_file():
 
 df = pd.read_csv("behavior.csv")
 def main():
-    if os.path.exists("repetitive.csv"):
-        os.remove("repetitive.csv")
-
     clean_file()
     clean_df(df)
     modify_df(df)
@@ -96,12 +101,15 @@ def main():
                      "Friday": [], "Saturday": [], "Sunday": []}
     comment(f"({13}) INITIALLY day_behaviors = {day_behaviors}")
 
-    repetitive_pattern = []
-    comment(f"({14}) INITIALLY repetitive_pattern (after meeting threshold) = {repetitive_pattern}")
+    automations = []
+    comment(f"({14}) INITIALLY automations (after meeting threshold) = {automations}")
 
     comment(f"({15}) observe logs of repetitive behavior")
-    update_df_confidence(df, behavior_confidences, day_behaviors, repetitive_pattern)
-    for str in repetitive_pattern:  print(f"{str} --> {behavior_confidences[str]}")  # DEBUG LOG FOR EVALUATION
+    update_df_confidence(df, behavior_confidences, day_behaviors, automations)
+
+    for str in automations:  print(f"{str}")  # DEBUG LOG FOR EVALUATION
+    for str in behavior_confidences:  print(f"{str} --> {behavior_confidences[str]}")  # DEBUG LOG FOR EVALUATION
+
 
 """
 Check each day to figure out every weekly behavior and update their confidence
@@ -119,7 +127,7 @@ Check each day to figure out every weekly behavior and update their confidence
 """
 
 alpha = 0.0; decay=0.0; base_confidence = 0
-def update_df_confidence(df, behavior_confidences, day_behaviors, repetitive_pattern):
+def update_df_confidence(df, behavior_confidences, day_behaviors, automations):
     comment(f"({16}) Manually Input alpha, beta, base_confidence (look description above this function)")
     global alpha, decay, base_confidence
     alpha = float(input("alpha [0.0-1.0] = "))
@@ -135,7 +143,7 @@ def update_df_confidence(df, behavior_confidences, day_behaviors, repetitive_pat
             # DECREASE CONFIDENCE if some behaviors did not occur from PREVIOUS DATE
             if pending_tasks:
                 for task in pending_tasks:
-                    decrease_confidence(behavior_confidences, task, repetitive_pattern, day_behaviors[current_day])
+                    decrease_confidence(behavior_confidences, task, automations, day_behaviors[current_day])
 
             #update date and task to DIFFERENTIATE Date and observe PREVIOUS DAY TASK Which were absent
             oldDate = df.loc[i, 'date']; current_day = df.loc[i, 'day']
@@ -145,6 +153,11 @@ def update_df_confidence(df, behavior_confidences, day_behaviors, repetitive_pat
         #if a behavior exists, return it's last confidence OR IF NOT, return behavior_does_not_exist
         behavior = behavior_confidences.get(df.loc[i, 'behavior'], 'behavior_does_not_exist')
 
+        print(f"behavior: {df.loc[i, 'behavior']}, automations: {automations}")
+        if df.loc[i, 'behavior'] in automations:
+            print(f">>>>>>>>>>>>>>>>>>>> behavior: {df.loc[i, 'behavior']} is in AUTOMATIONS <<<<<<<<<<<<<<<<<<<<")
+            continue
+
         if behavior == 'behavior_does_not_exist':
             behavior_confidences[df.loc[i, 'behavior']] = [base_confidence]
             # append the behavior in weekly pattern
@@ -152,7 +165,7 @@ def update_df_confidence(df, behavior_confidences, day_behaviors, repetitive_pat
 
         else:
             #increase existing behavior's confidence since it occurred this week
-            increase_confidence(behavior_confidences, df.loc[i, 'behavior'], repetitive_pattern)
+            increase_confidence(behavior_confidences, df.loc[i, 'behavior'], automations)
 
             #since the behavior occurred this week, remove it from this week's pending_tasks
             if df.loc[i, 'behavior'] in pending_tasks:
@@ -162,13 +175,13 @@ def update_df_confidence(df, behavior_confidences, day_behaviors, repetitive_pat
     if pending_tasks:
         for task in pending_tasks:
             # @@ day_behaviors[current_day] is passed by reference. so any modification affects the main column @@
-            decrease_confidence(behavior_confidences, task, repetitive_pattern, day_behaviors[current_day])
+            decrease_confidence(behavior_confidences, task, automations, day_behaviors[current_day])
 
 """
 - find the existing behavior from dictionary and append the new score found using Exponential Smoothing Formula
 - if the score exceeds the threshold, extract that behavior for the user to use as automation.
 """
-def increase_confidence(dict_for_behavior_confidences, behavior, repetitive_pattern):
+def increase_confidence(dict_for_behavior_confidences, behavior, automations):
     specific_behavior_confidence_list = dict_for_behavior_confidences[behavior]
     last_confidence = specific_behavior_confidence_list[-1]
 
@@ -176,12 +189,9 @@ def increase_confidence(dict_for_behavior_confidences, behavior, repetitive_patt
     new_confidence = alpha * 100 + (1 - alpha) * last_confidence    # EXPONENTIAL SMOOTHING FORMULA
 
     if new_confidence > 75:
-        if behavior in repetitive_pattern:
-            pass                                    # nothing to append since it is already there
-        else:
-            # add in repetitive pattern
-            repetitive_pattern.append(behavior)
-            append_in_repetitive_csv(behavior)
+        # add in automations
+        automations.append(behavior)
+        append_in_automation_csv(behavior)
 
     #appending new confidence for the behavior to PLOT them later
     dict_for_behavior_confidences[behavior].append(new_confidence)
@@ -189,29 +199,26 @@ def increase_confidence(dict_for_behavior_confidences, behavior, repetitive_patt
 """
 - if the repetitive file does not exist, create one and append the behavior
 """
-def append_in_repetitive_csv(behavior_description):
+def append_in_automation_csv(behavior_description):
     try:
-        repetitive_df = pd.read_csv("repetitive.csv")
-
+        automation_df = pd.read_csv("automation.csv")
         new_row_data = {"behavior": [behavior_description]}
         new_row_df = pd.DataFrame(new_row_data)
-
-        new_row_df.to_csv('repetitive.csv', mode='a', header=False, index=False)
+        new_row_df.to_csv('automation.csv', mode='a', header=False, index=False)
 
     except FileNotFoundError:
         print("REPETITIVE File does not exist, create a empty file with one column name")
         df = pd.DataFrame(columns=["behavior", "confidence"])
-        df.to_csv('repetitive.csv', index=False)
+        df.to_csv('automation.csv', index=False)
 
-        append_in_repetitive_csv(behavior_description)
+        append_in_automation_csv(behavior_description)
 
 """
 - find the existing behavior from dictionary and append the new score found using Exponential Smoothing Formula
 - if the score exceeds the threshold, REMOVE that behavior since it is not repetitive anymore.
 - keep track of every dumped behavior in garbage
 """
-def decrease_confidence(dict_for_behavior_confidences, behavior, repetitive_pattern, daily_behaviors):
-    print(f"SHOVON HERE FOR: {behavior} with: {dict_for_behavior_confidences[behavior]}")
+def decrease_confidence(dict_for_behavior_confidences, behavior, automations, daily_behaviors):
     specific_behavior_confidence_list = dict_for_behavior_confidences[behavior]
     last_confidence = specific_behavior_confidence_list[-1]
 
@@ -225,38 +232,12 @@ def decrease_confidence(dict_for_behavior_confidences, behavior, repetitive_patt
             print(f"behavior to be DROPPED: {behavior}, PAST: {dict_for_behavior_confidences.pop(behavior, None)}")
             # Remove from daily behaviors to not check it when checking pending behaviors
             daily_behaviors.remove(behavior)
-
             # keep track of every discarded behavior as NOT REPETITIVE
             append_in_garbage_csv(behavior)
-
-            # Remove from repetitive_pattern since it is not repetitive
-            if behavior in repetitive_pattern:
-                repetitive_pattern.remove(behavior)
-                remove_from_repetitive_csv(behavior)
-
-                print(f"A REPETITIVE BEHAVIOR PUT IN GARBAGE: {behavior}")
-                append_in_garbage_csv(behavior)
-                return
-
-            else:
-                return
+            return
 
     #decrease the behavior (if it does not decrease below the threshold)
     dict_for_behavior_confidences[behavior].append(new_confidence)
-
-"""
-- repetitive file already exists since I am removing a behavior from it
-- figure out which row the behavior exists and delete it
-"""
-def remove_from_repetitive_csv(behavior_description):
-    repetitive_df = pd.read_csv("repetitive.csv")
-
-    #find the index where the behavior exists and drop them
-    index_to_delete = repetitive_df[repetitive_df['behavior'] == behavior_description].index
-    repetitive_df.drop(index_to_delete, inplace=True)
-
-    #over-write previous file without the new index
-    repetitive_df.to_csv('repetitive.csv', mode='a', header=False, index=False)
 
 """
 - add the discarded behavior in garbage file (if it exist, create one if it doesn't
