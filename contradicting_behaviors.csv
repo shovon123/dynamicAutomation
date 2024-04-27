@@ -1,0 +1,13 @@
+date,time,device,action,value,deviceID,eventID
+1/1/2024,09:00AM,light1,power,1,101,101
+1/1/2024,09:01AM,light1,power,0,101,103
+1/1/2024,11:01AM,light1,power,1,101,103
+1/1/2024,11:01AM,light1,power,0,101,103
+1/1/2024,1:01PM,light1,power,1,101,103
+
+
+
+AGENT --> 1 --> Behavior --> Automation
+BASE CONFIDENCE --> AUTOMATION
+
+AGENT --> ALPHA, Initial
