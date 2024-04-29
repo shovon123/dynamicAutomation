@@ -1,3 +1,9 @@
+"""
+Advantage
+- user intervention is none
+- can contradict automations
+"""
+
 import os
 import pandas as pd
 
