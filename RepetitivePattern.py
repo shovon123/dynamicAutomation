@@ -1,11 +1,3 @@
-"""
-Advantage
-- user has control over automations
-Disadvantage
-- the smoothing factor, Initial confidence is being adjusted by hand
-- user intervention was not fully solved
-"""
-
 import os
 import pandas as pd
 
